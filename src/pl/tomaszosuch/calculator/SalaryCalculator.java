@@ -3,51 +3,61 @@ package pl.tomaszosuch.calculator;
 import pl.tomaszosuch.model.Employee;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
+
 
 public class SalaryCalculator implements SalaryCalculatorRepository {
 
     private SalaryCalculatorConfig calculatorConfig;
+    private Employee employee;
+    private BigDecimal sumInsurance = null;
 
     public SalaryCalculator(SalaryCalculatorConfig calculatorConfig) {
         this.calculatorConfig = calculatorConfig;
-
     }
 
-    private double netSalaryPerMonth(Employee employee) {
-        return employee.getRatePerHour() * employee.getHoursWorked() * 30;
+    private BigDecimal netSalaryPermonth(Employee employee) {
+        return employee.getNetSalaryPerMonth();
     }
 
-    private double socialInsuranceCalc(double gross) {
-        return gross * (calculatorConfig.getDisabilityPremium() + calculatorConfig.getPensionContribution()
-                + calculatorConfig.getSicknessContribution());
+    private BigDecimal socialInsuranceCalc(BigDecimal gross) {
+        sumInsurance = calculatorConfig.getDisabilityPremium().add(calculatorConfig.getPensionContribution().add(calculatorConfig.getSicknessContribution()));
+        return gross.multiply(sumInsurance);
     }
 
-    private double insuranceHealtCalc(double gross) {
-        return gross * (1 - calculatorConfig.getDisabilityPremium() - calculatorConfig.getPensionContribution()
-                - calculatorConfig.getSicknessContribution()) * 0.09;
+    private BigDecimal insuranceHealtCalc(BigDecimal gross) {
+        return calculatorConfig.getHealthContribution().multiply(gross.multiply(new BigDecimal(1).subtract(sumInsurance)));
     }
 
-    private double incomeTaxCalc(double gross) {
-        double insurance = socialInsuranceCalc(gross);
-        return Math.round(Math.round(gross - insurance - 250) * 0.17 - 43.76 - (gross - insurance) * 0.0775);
+    public BigDecimal incomeTaxCalc(BigDecimal gross) {
+        BigDecimal insurance = socialInsuranceCalc(gross);
+
+        BigInteger a = gross.subtract(insurance.subtract(calculatorConfig.getCostGettingIncome())).toBigInteger();//pseudo zaokrąglenie
+        BigDecimal b = new BigDecimal(a);
+        BigDecimal c = calculatorConfig.getBasisIncomeTax().multiply(b);
+        BigDecimal d = calculatorConfig.getHealthTaxContribution().multiply(gross.subtract(insurance));
+        BigDecimal e = c.subtract(calculatorConfig.getTaxFreeAllowance());
+        BigInteger f = e.subtract(d).toBigInteger();
+        BigDecimal result = new BigDecimal(f);
+        return result;
     }
 
     @Override
     public BigDecimal calculatorGrossSalary(Employee employee) {
-        double grossSalary = netSalaryPerMonth(employee) * (1 + 0.4);
-        double netSalaryConst = netSalaryPerMonth(employee);
-        double flag = 0;
+        BigDecimal factor = new BigDecimal(0.4);
+        BigDecimal grossSalary = netSalaryPermonth(employee).add(netSalaryPermonth(employee).multiply(factor));
+        BigDecimal netSalaryConst = netSalaryPermonth(employee);
+        BigDecimal flag = null;
         do {
-
             socialInsuranceCalc(grossSalary);
-            double netSalaryEstimated = grossSalary - socialInsuranceCalc(grossSalary) - insuranceHealtCalc(grossSalary) - incomeTaxCalc(grossSalary);
-            if (netSalaryEstimated > netSalaryConst) {
-                flag = netSalaryEstimated - netSalaryConst;
+            BigDecimal netSalaryEstimated = grossSalary.subtract(socialInsuranceCalc(grossSalary).subtract(insuranceHealtCalc(grossSalary).subtract(incomeTaxCalc(grossSalary))));
+            if (netSalaryEstimated.compareTo(netSalaryConst) > 0) {
+                flag = netSalaryEstimated.subtract(netSalaryConst);
             } else {
-                flag = netSalaryConst - netSalaryEstimated;
+                flag = netSalaryConst.subtract(netSalaryEstimated);
             }
-            grossSalary -= flag;
-        } while (flag > 0.01);
-        return BigDecimal.valueOf(grossSalary);
+            grossSalary = grossSalary.subtract(flag);
+        } while (flag.compareTo(flag.abs()) > 0); //TODO problem z warunkiem pętli i kolejnych iteracji
+        return grossSalary;
     }
 }

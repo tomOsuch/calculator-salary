@@ -1,17 +1,17 @@
 package pl.tomaszosuch.model;
 
+import java.math.BigDecimal;
+
 public class Employee {
 
     private String firstName;
     private String lastName;
-    private double ratePerHour;
-    private double hoursWorked;
+    private BigDecimal netSalaryPerMonth;
 
-    public Employee(String firstName, String lastName, double ratePerHour, double hoursWorked) {
+    public Employee(String firstName, String lastName, BigDecimal netSalaryPerMonth) {
         this.firstName = firstName;
         this.lastName = lastName;
-        this.ratePerHour = ratePerHour;
-        this.hoursWorked = hoursWorked;
+        this.netSalaryPerMonth = netSalaryPerMonth;
     }
 
     public String getFirstName() {
@@ -22,12 +22,8 @@ public class Employee {
         return lastName;
     }
 
-    public double getRatePerHour() {
-        return ratePerHour;
-    }
-
-    public double getHoursWorked() {
-        return hoursWorked;
+    public BigDecimal getNetSalaryPerMonth() {
+        return netSalaryPerMonth;
     }
 
     @Override
@@ -35,7 +31,6 @@ public class Employee {
         return "Pracownik: " +
                 "firstName: " + firstName +
                 ", lastName: " + lastName +
-                ", ratePerHour: " + ratePerHour +
-                ", hoursWorked: " + hoursWorked;
+                ", netSalaryPerMonth: " + netSalaryPerMonth;
     }
 }
